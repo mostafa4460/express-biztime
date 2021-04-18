@@ -48,7 +48,7 @@ router.post('/', async (req, res, next) => {
             RETURNING code, name, description`,
             [code, name, description]
         );
-        return res.json({ company: result.rows[0] });
+        return res.status(201).json({ company: result.rows[0] });
     } catch(e) {
         return next(e);
     }
