@@ -16,24 +16,31 @@ router.get('/', async (req, res, next) => {
     }
 })
 
-router.get('/:code', async (req, res, next) => {
+router.get('/:compCode', async (req, res, next) => {
     try {
-        const { code } = req.params;
-        const company = await db.query(
-            `SELECT code, name, description
-            FROM companies
-            WHERE code = $1`,
-            [code]
+        const { compCode } = req.params;
+        const companyRes = await db.query(
+            `SELECT c.code, c.name, c.description, i.field
+            FROM companies AS c
+            LEFT JOIN inds_comps AS ic
+            ON ic.comp_code = c.code
+            LEFT JOIN industries AS i
+            ON ic.ind_code = i.code
+            WHERE c.code = $1`,
+            [compCode]
         );
-        if (company.rows.length === 0) throw new ExpressError(`Could not find company with code name ${code}`, 404);
-        const invoices = await db.query(
+        if (companyRes.rows.length === 0) throw new ExpressError(`Could not find company with code name ${compCode}`, 404);
+        let { code, name, description } = companyRes.rows[0];
+        let fields = companyRes.rows.map(r => r.field);
+        const company = {code, name, description, fields};
+        const invoicesRes = await db.query(
             `SELECT id, comp_code, amt, paid, add_date, paid_date
             FROM invoices
             WHERE comp_code = $1`,
             [code]
         );
-        company.rows[0]["invoices"] = invoices.rows;
-        return res.json({ company: company.rows[0] });
+        company["invoices"] = invoicesRes.rows;
+        return res.json({ company });
     } catch(e) {
         return next(e);
     }
